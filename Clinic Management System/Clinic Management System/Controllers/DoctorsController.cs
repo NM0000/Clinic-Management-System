@@ -1,164 +1,80 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using Clinic_Management_System.DTOs.Doctors;
+using Clinic_Management_System.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.EntityFrameworkCore;
-using Clinic_Management_System.Data;
-using Clinic_Management_System.Models;
 
 namespace Clinic_Management_System.Controllers
 {
-    public class DoctorsController : Controller
+    [Route("api/[controller]")]
+    [ApiController]
+    [Authorize(Roles = "Admin")]
+    public class DoctorsController : ControllerBase
     {
-        private readonly ApplicationDbContext _context;
+        private readonly IDoctorService _doctorService;
 
-        public DoctorsController(ApplicationDbContext context)
+        public DoctorsController(IDoctorService doctorService)
         {
-            _context = context;
+            _doctorService = doctorService;
         }
 
-        // GET: Doctors
-        public async Task<IActionResult> Index()
-        {
-            var applciationDbContext = _context.Doctors.Include(d => d.User);
-            return View(await applciationDbContext.ToListAsync());
-        }
-
-        // GET: Doctors/Details/5
-        public async Task<IActionResult> Details(int? id)
-        {
-            if (id == null)
-            {
-                return NotFound();
-            }
-
-            var doctor = await _context.Doctors
-                .Include(d => d.User)
-                .FirstOrDefaultAsync(m => m.Id == id);
-            if (doctor == null)
-            {
-                return NotFound();
-            }
-
-            return View(doctor);
-        }
-
-        // GET: Doctors/Create
-        public IActionResult Create()
-        {
-            ViewData["UserId"] = new SelectList(_context.Set<AppUser>(), "Id", "Id");
-            return View();
-        }
-
-        // POST: Doctors/Create
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
+        // POST: api/Doctors
         [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("Id,UserId,Specialization,LicenseNumber,CreatedAt")] Doctor doctor)
+        public async Task<IActionResult> CreateDoctor([FromBody] DoctorCreateRequestDto request)
         {
-            if (ModelState.IsValid)
+            try
             {
-                _context.Add(doctor);
-                await _context.SaveChangesAsync();
-                return RedirectToAction(nameof(Index));
+                var doctor = await _doctorService.CreateDoctorAsync(request);
+                return CreatedAtAction(nameof(GetDoctor), new { id = doctor.Id }, doctor);
             }
-            ViewData["UserId"] = new SelectList(_context.Set<AppUser>(), "Id", "Id", doctor.UserId);
-            return View(doctor);
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Conflict(new { message = ex.Message });
+            }
         }
 
-        // GET: Doctors/Edit/5
-        public async Task<IActionResult> Edit(int? id)
+        // GET: api/Doctors
+        [HttpGet]
+        public async Task<ActionResult<List<DoctorListResponseDto>>> GetAllDoctors()
         {
-            if (id == null)
-            {
-                return NotFound();
-            }
+            var doctors = await _doctorService.GetAllDoctorsAsync();
+            return Ok(doctors);
+        }
 
-            var doctor = await _context.Doctors.FindAsync(id);
+        // GET: api/Doctors/5
+        [HttpGet("{id}")]
+        public async Task<ActionResult<DoctorResponseDto>> GetDoctor(int id)
+        {
+            var doctor = await _doctorService.GetDoctorByIdAsync(id);
             if (doctor == null)
-            {
-                return NotFound();
-            }
-            ViewData["UserId"] = new SelectList(_context.Set<AppUser>(), "Id", "Id", doctor.UserId);
-            return View(doctor);
+                return NotFound(new { message = "Doctor not found" });
+
+            return Ok(doctor);
         }
 
-        // POST: Doctors/Edit/5
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("Id,UserId,Specialization,LicenseNumber,CreatedAt")] Doctor doctor)
+        // PUT: api/Doctors/5
+        [HttpPut("{id}")]
+        public async Task<IActionResult> UpdateDoctor(int id, [FromBody] DoctorUpdateRequestDto request)
         {
-            if (id != doctor.Id)
-            {
-                return NotFound();
-            }
-
-            if (ModelState.IsValid)
-            {
-                try
-                {
-                    _context.Update(doctor);
-                    await _context.SaveChangesAsync();
-                }
-                catch (DbUpdateConcurrencyException)
-                {
-                    if (!DoctorExists(doctor.Id))
-                    {
-                        return NotFound();
-                    }
-                    else
-                    {
-                        throw;
-                    }
-                }
-                return RedirectToAction(nameof(Index));
-            }
-            ViewData["UserId"] = new SelectList(_context.Set<AppUser>(), "Id", "Id", doctor.UserId);
-            return View(doctor);
-        }
-
-        // GET: Doctors/Delete/5
-        public async Task<IActionResult> Delete(int? id)
-        {
-            if (id == null)
-            {
-                return NotFound();
-            }
-
-            var doctor = await _context.Doctors
-                .Include(d => d.User)
-                .FirstOrDefaultAsync(m => m.Id == id);
+            var doctor = await _doctorService.UpdateDoctorAsync(id, request);
             if (doctor == null)
-            {
-                return NotFound();
-            }
+                return NotFound(new { message = "Doctor not found" });
 
-            return View(doctor);
+            return Ok(doctor);
         }
 
-        // POST: Doctors/Delete/5
-        [HttpPost, ActionName("Delete")]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> DeleteConfirmed(int id)
+        // DELETE: api/Doctors/5
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteDoctor(int id)
         {
-            var doctor = await _context.Doctors.FindAsync(id);
-            if (doctor != null)
-            {
-                _context.Doctors.Remove(doctor);
-            }
+            var result = await _doctorService.DeleteDoctorAsync(id);
+            if (!result)
+                return NotFound(new { message = "Doctor not found" });
 
-            await _context.SaveChangesAsync();
-            return RedirectToAction(nameof(Index));
-        }
-
-        private bool DoctorExists(int id)
-        {
-            return _context.Doctors.Any(e => e.Id == id);
+            return Ok(new { message = "Doctor deleted successfully" });
         }
     }
 }

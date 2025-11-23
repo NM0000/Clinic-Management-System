@@ -22,6 +22,10 @@ namespace Clinic_Management_System.Data
                 .WithMany()
                 .HasForeignKey(d => d.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            // Global Query Filter for Soft Delete
+            builder.Entity<Patient>()
+                .HasQueryFilter(p => !p.IsDeleted);
         }
     }
 }

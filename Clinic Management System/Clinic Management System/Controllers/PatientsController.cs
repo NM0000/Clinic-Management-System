@@ -1,157 +1,102 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using Clinic_Management_System.DTOs.Patients;
+using Clinic_Management_System.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.EntityFrameworkCore;
-using Clinic_Management_System.Data;
-using Clinic_Management_System.Models;
 
 namespace Clinic_Management_System.Controllers
 {
-    public class PatientsController : Controller
+    [Route("api/[controller]")]
+    [ApiController]
+    [Authorize]
+    public class PatientsController : ControllerBase
     {
-        private readonly ApplicationDbContext _context;
+        private readonly IPatientService _patientService;
 
-        public PatientsController(ApplicationDbContext context)
+        public PatientsController(IPatientService patientService)
         {
-            _context = context;
+            _patientService = patientService;
         }
 
-        // GET: Patients
-        public async Task<IActionResult> Index()
-        {
-            return View(await _context.Patients.ToListAsync());
-        }
-
-        // GET: Patients/Details/5
-        public async Task<IActionResult> Details(int? id)
-        {
-            if (id == null)
-            {
-                return NotFound();
-            }
-
-            var patient = await _context.Patients
-                .FirstOrDefaultAsync(m => m.Id == id);
-            if (patient == null)
-            {
-                return NotFound();
-            }
-
-            return View(patient);
-        }
-
-        // GET: Patients/Create
-        public IActionResult Create()
-        {
-            return View();
-        }
-
-        // POST: Patients/Create
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
+        // POST: api/Patients
         [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("Id,FirstName,LastName,DateOfBirth,Gender,PhoneNumber,Email,Address,CreatedAt")] Patient patient)
+        [Authorize(Roles = "Admin,Receptionist")]
+        public async Task<IActionResult> CreatePatient([FromBody] PatientCreateRequestDto request)
         {
-            if (ModelState.IsValid)
+            try
             {
-                _context.Add(patient);
-                await _context.SaveChangesAsync();
-                return RedirectToAction(nameof(Index));
+                var patient = await _patientService.CreatePatientAsync(request);
+                return CreatedAtAction(nameof(GetPatient), new { id = patient.Id }, patient);
             }
-            return View(patient);
+            catch (InvalidOperationException ex)
+            {
+                return Conflict(new { message = ex.Message });
+            }
         }
 
-        // GET: Patients/Edit/5
-        public async Task<IActionResult> Edit(int? id)
+        // GET: api/Patients
+        [HttpGet]
+        [Authorize(Roles = "Admin,Receptionist,Doctor")]
+        public async Task<ActionResult<List<PatientListResponseDto>>> GetAllPatients()
         {
-            if (id == null)
-            {
-                return NotFound();
-            }
+            // TODO Phase 3: Doctors should only see patients linked to their appointments
+            var patients = await _patientService.GetAllPatientsAsync();
+            return Ok(patients);
+        }
 
-            var patient = await _context.Patients.FindAsync(id);
+        // GET: api/Patients/5
+        [HttpGet("{id}")]
+        [Authorize(Roles = "Admin,Receptionist,Doctor")]
+        public async Task<ActionResult<PatientResponseDto>> GetPatient(int id)
+        {
+            // TODO Phase 3: Verify doctor has appointment with this patient
+            var patient = await _patientService.GetPatientByIdAsync(id);
             if (patient == null)
-            {
-                return NotFound();
-            }
-            return View(patient);
+                return NotFound(new { message = "Patient not found" });
+
+            return Ok(patient);
         }
 
-        // POST: Patients/Edit/5
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("Id,FirstName,LastName,DateOfBirth,Gender,PhoneNumber,Email,Address,CreatedAt")] Patient patient)
+        // PUT: api/Patients/5
+        [HttpPut("{id}")]
+        [Authorize(Roles = "Admin,Receptionist")]
+        public async Task<IActionResult> UpdatePatient(int id, [FromBody] PatientUpdateRequestDto request)
         {
-            if (id != patient.Id)
+            try
             {
-                return NotFound();
-            }
+                var patient = await _patientService.UpdatePatientAsync(id, request);
+                if (patient == null)
+                    return NotFound(new { message = "Patient not found" });
 
-            if (ModelState.IsValid)
-            {
-                try
-                {
-                    _context.Update(patient);
-                    await _context.SaveChangesAsync();
-                }
-                catch (DbUpdateConcurrencyException)
-                {
-                    if (!PatientExists(patient.Id))
-                    {
-                        return NotFound();
-                    }
-                    else
-                    {
-                        throw;
-                    }
-                }
-                return RedirectToAction(nameof(Index));
+                return Ok(patient);
             }
-            return View(patient);
+            catch (InvalidOperationException ex)
+            {
+                return Conflict(new { message = ex.Message });
+            }
         }
 
-        // GET: Patients/Delete/5
-        public async Task<IActionResult> Delete(int? id)
+        // DELETE: api/Patients/5 (Soft Delete)
+        [HttpDelete("{id}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> DeletePatient(int id)
         {
-            if (id == null)
-            {
-                return NotFound();
-            }
+            var result = await _patientService.SoftDeletePatientAsync(id);
+            if (!result)
+                return NotFound(new { message = "Patient not found" });
 
-            var patient = await _context.Patients
-                .FirstOrDefaultAsync(m => m.Id == id);
-            if (patient == null)
-            {
-                return NotFound();
-            }
-
-            return View(patient);
+            return Ok(new { message = "Patient deleted successfully" });
         }
 
-        // POST: Patients/Delete/5
-        [HttpPost, ActionName("Delete")]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> DeleteConfirmed(int id)
+        // POST: api/Patients/5/restore
+        [HttpPost("{id}/restore")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> RestorePatient(int id)
         {
-            var patient = await _context.Patients.FindAsync(id);
-            if (patient != null)
-            {
-                _context.Patients.Remove(patient);
-            }
+            var result = await _patientService.RestorePatientAsync(id);
+            if (!result)
+                return NotFound(new { message = "Patient not found or not deleted" });
 
-            await _context.SaveChangesAsync();
-            return RedirectToAction(nameof(Index));
-        }
-
-        private bool PatientExists(int id)
-        {
-            return _context.Patients.Any(e => e.Id == id);
+            return Ok(new { message = "Patient restored successfully" });
         }
     }
 }
