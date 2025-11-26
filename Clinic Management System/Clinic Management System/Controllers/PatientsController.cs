@@ -2,6 +2,7 @@
 using Clinic_Management_System.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace Clinic_Management_System.Controllers
 {
@@ -43,12 +44,22 @@ namespace Clinic_Management_System.Controllers
             return Ok(patients);
         }
 
-        // GET: api/Patients/5
         [HttpGet("{id}")]
         [Authorize(Roles = "Admin,Receptionist,Doctor")]
         public async Task<ActionResult<PatientResponseDto>> GetPatient(int id)
         {
-            // TODO Phase 3: Verify doctor has appointment with this patient
+            // If user is a doctor, verify they have appointments with this patient
+            if (User.IsInRole("Doctor") && !User.IsInRole("Admin"))
+            {
+                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (string.IsNullOrEmpty(userId))
+                    return Unauthorized();
+
+                var canAccess = await _patientService.CanDoctorAccessPatientAsync(id, userId);
+                if (!canAccess)
+                    return Forbid(); // 403 Forbidden - Doctor has no appointments with this patient
+            }
+
             var patient = await _patientService.GetPatientByIdAsync(id);
             if (patient == null)
                 return NotFound(new { message = "Patient not found" });

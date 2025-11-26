@@ -116,6 +116,19 @@ namespace Clinic_Management_System.Services
             await _context.SaveChangesAsync();
             return true;
         }
+        public async Task<bool> CanDoctorAccessPatientAsync(int patientId, string userId)
+        {
+            // Get doctor ID from userId
+            var doctor = await _context.Doctors.FirstOrDefaultAsync(d => d.UserId == userId);
+            if (doctor == null)
+                return false;
+
+            // Check if doctor has any appointments with this patient
+            var hasAppointment = await _context.Appointments
+                .AnyAsync(a => a.PatientId == patientId && a.DoctorId == doctor.Id);
+
+            return hasAppointment;
+        }
 
         private static PatientResponseDto MapToResponseDto(Patient patient)
         {

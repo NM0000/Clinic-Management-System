@@ -10,5 +10,6 @@ namespace Clinic_Management_System.Services
         Task<PatientResponseDto?> UpdatePatientAsync(int id, PatientUpdateRequestDto request);
         Task<bool> SoftDeletePatientAsync(int id);
         Task<bool> RestorePatientAsync(int id);
+        Task<bool> CanDoctorAccessPatientAsync(int id, string userId);
     }
 }
