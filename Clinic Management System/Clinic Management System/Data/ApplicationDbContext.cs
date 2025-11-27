@@ -1,6 +1,7 @@
 ﻿using Clinic_Management_System.Models;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 
 namespace Clinic_Management_System.Data
@@ -17,6 +18,19 @@ namespace Clinic_Management_System.Data
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
+            foreach (var entityType in builder.Model.GetEntityTypes())
+            {
+                foreach (var property in entityType.GetProperties())
+                {
+                    if (property.ClrType == typeof(DateTime) || property.ClrType == typeof(DateTime?))
+                    {
+                        property.SetValueConverter(new ValueConverter<DateTime, DateTime>(
+                            v => v.ToUniversalTime(),
+                            v => DateTime.SpecifyKind(v, DateTimeKind.Utc)));
+                    }
+                }
+            }
+
             base.OnModelCreating(builder);
             // Configure Doctor-User relationship
             builder.Entity<Doctor>()
@@ -43,6 +57,10 @@ namespace Clinic_Management_System.Data
                 .HasForeignKey(a => a.PatientId)
                 .OnDelete(DeleteBehavior.Restrict);
 
+            // Global Query Filter for Appointments - exclude appointments with soft-deleted patients
+            builder.Entity<Appointment>()
+                .HasQueryFilter(a => !a.Patient!.IsDeleted);
+
             // Configure Appointment-Doctor relationship
             builder.Entity<Appointment>()
                 .HasOne(a => a.Doctor)
@@ -53,6 +71,8 @@ namespace Clinic_Management_System.Data
             // Index for faster appointment queries
             builder.Entity<Appointment>()
                 .HasIndex(a => new { a.DoctorId, a.AppointmentDate });
+
+
         }
     }
 }
