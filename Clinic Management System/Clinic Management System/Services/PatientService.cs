@@ -8,17 +8,21 @@ namespace Clinic_Management_System.Services
     public class PatientService : IPatientService
     {
         private readonly ApplicationDbContext _context;
+        private readonly ILogger<PatientService> _logger;
 
-        public PatientService(ApplicationDbContext context)
+        public PatientService(
+            ApplicationDbContext context,
+            ILogger<PatientService> logger)
         {
             _context = context;
+            _logger = logger;
         }
 
         public async Task<PatientResponseDto> CreatePatientAsync(PatientCreateRequestDto request)
         {
             // Check for duplicate email
             var existingPatient = await _context.Patients
-                .IgnoreQueryFilters() // Check even soft-deleted patients
+                .IgnoreQueryFilters() 
                 .FirstOrDefaultAsync(p => p.Email == request.Email);
 
             if (existingPatient != null && !existingPatient.IsDeleted)
@@ -43,13 +47,16 @@ namespace Clinic_Management_System.Services
 
         public async Task<PatientResponseDto?> GetPatientByIdAsync(int id)
         {
-            var patient = await _context.Patients.FindAsync(id);
+            var patient = await _context.Patients
+                .AsNoTracking()
+                .FirstOrDefaultAsync(p => p.Id == id);
             return patient == null ? null : MapToResponseDto(patient);
         }
 
         public async Task<List<PatientListResponseDto>> GetAllPatientsAsync()
         {
             return await _context.Patients
+                .AsNoTracking()
                 .Select(p => new PatientListResponseDto
                 {
                     Id = p.Id,
@@ -104,7 +111,8 @@ namespace Clinic_Management_System.Services
         public async Task<bool> RestorePatientAsync(int id)
         {
             var patient = await _context.Patients
-                .IgnoreQueryFilters() // Include soft-deleted patients
+                .IgnoreQueryFilters() 
+                .AsNoTracking()
                 .FirstOrDefaultAsync(p => p.Id == id);
 
             if (patient == null || !patient.IsDeleted)
@@ -119,12 +127,15 @@ namespace Clinic_Management_System.Services
         public async Task<bool> CanDoctorAccessPatientAsync(int patientId, string userId)
         {
             // Get doctor ID from userId
-            var doctor = await _context.Doctors.FirstOrDefaultAsync(d => d.UserId == userId);
+            var doctor = await _context.Doctors
+                .AsNoTracking()
+                .FirstOrDefaultAsync(d => d.UserId == userId);
             if (doctor == null)
                 return false;
 
             // Check if doctor has any appointments with this patient
             var hasAppointment = await _context.Appointments
+                .AsNoTracking()
                 .AnyAsync(a => a.PatientId == patientId && a.DoctorId == doctor.Id);
 
             return hasAppointment;

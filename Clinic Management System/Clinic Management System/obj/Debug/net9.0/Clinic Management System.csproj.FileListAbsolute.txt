@@ -332,3 +332,5 @@ D:\Intern_Amnil_2nd_phase\Clinic-Management-System\Clinic Management System\Clin
 D:\Intern_Amnil_2nd_phase\Clinic-Management-System\Clinic Management System\Clinic Management System\obj\Debug\net9.0\Clinic Management System.pdb
 D:\Intern_Amnil_2nd_phase\Clinic-Management-System\Clinic Management System\Clinic Management System\obj\Debug\net9.0\Clinic Management System.genruntimeconfig.cache
 D:\Intern_Amnil_2nd_phase\Clinic-Management-System\Clinic Management System\Clinic Management System\obj\Debug\net9.0\ref\Clinic Management System.dll
+D:\Intern_Amnil_2nd_phase\Clinic-Management-System\Clinic Management System\Clinic Management System\bin\Debug\net9.0\Clinic Management System.xml
+D:\Intern_Amnil_2nd_phase\Clinic-Management-System\Clinic Management System\Clinic Management System\obj\Debug\net9.0\Clinic Management System.xml

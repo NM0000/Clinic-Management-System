@@ -9,50 +9,27 @@ namespace Clinic_Management_System.Services
     public class AppointmentService : IAppointmentService
     {
         private readonly ApplicationDbContext _context;
+        private readonly ILogger<AppointmentService> _logger;
         private const int SlotDurationMinutes = 30;
 
-        public AppointmentService(ApplicationDbContext context)
+        public AppointmentService(
+            ApplicationDbContext context,
+            ILogger<AppointmentService> logger)
         {
             _context = context;
+            _logger = logger;
         }
 
         public async Task<AppointmentResponseDto> CreateAppointmentAsync(AppointmentCreateDto request)
         {
-            // Validate future date
-            if (request.AppointmentDate <= DateTime.Now)
-                throw new ArgumentException("Appointment must be scheduled for a future date and time");
+            _logger.LogInformation("Creating appointment for Patient {PatientId} with Doctor {DoctorId}",
+                request.PatientId, request.DoctorId);
 
-            // Validate patient exists
-            var patient = await _context.Patients.FindAsync(request.PatientId);
-            if (patient == null)
-                throw new ArgumentException("Patient not found");
-
-            // Validate doctor exists
-            var doctor = await _context.Doctors.Include(d => d.User).FirstOrDefaultAsync(d => d.Id == request.DoctorId);
-            if (doctor == null)
-                throw new ArgumentException("Doctor not found");
-
-            // Validate doctor has schedule for this day and time
-            var dayOfWeek = request.AppointmentDate.DayOfWeek;
-            var appointmentTime = request.AppointmentDate.TimeOfDay;
-
-            var hasSchedule = await _context.DoctorSchedules
-                .AnyAsync(s => s.DoctorId == request.DoctorId
-                    && s.DayOfWeek == dayOfWeek
-                    && s.StartTime <= appointmentTime
-                    && s.EndTime >= appointmentTime.Add(TimeSpan.FromMinutes(SlotDurationMinutes)));
-
-            if (!hasSchedule)
-                throw new InvalidOperationException("Doctor is not available at the requested time");
-
-            // Check for double-booking (same doctor, same time)
-            var isBooked = await _context.Appointments
-                .AnyAsync(a => a.DoctorId == request.DoctorId
-                    && a.AppointmentDate == request.AppointmentDate
-                    && a.Status == AppointmentStatus.Scheduled);
-
-            if (isBooked)
-                throw new InvalidOperationException("This time slot is already booked");
+            await ValidateFutureDateAsync(request.AppointmentDate);
+            await ValidatePatientExistsAsync(request.PatientId);
+            await ValidateDoctorExistsAsync(request.DoctorId);
+            await ValidateDoctorScheduleAsync(request.DoctorId, request.AppointmentDate);
+            await ValidateNoDoubleBookingAsync(request.DoctorId, request.AppointmentDate);
 
             var appointment = new Appointment
             {
@@ -66,16 +43,19 @@ namespace Clinic_Management_System.Services
             _context.Appointments.Add(appointment);
             await _context.SaveChangesAsync();
 
+            _logger.LogInformation("Appointment {AppointmentId} created successfully", appointment.Id);
+
             return await GetAppointmentByIdAsync(appointment.Id)
-                ?? throw new Exception("Failed to retrieve created appointment");
+                ?? throw new InvalidOperationException("Failed to retrieve created appointment");
         }
 
         public async Task<AppointmentResponseDto?> GetAppointmentByIdAsync(int id)
         {
             return await _context.Appointments
+                .AsNoTracking() 
                 .Include(a => a.Patient)
                 .Include(a => a.Doctor)
-                .ThenInclude(d => d!.User)
+                    .ThenInclude(d => d!.User)
                 .Where(a => a.Id == id)
                 .Select(a => MapToResponseDto(a))
                 .FirstOrDefaultAsync();
@@ -84,9 +64,10 @@ namespace Clinic_Management_System.Services
         public async Task<List<AppointmentResponseDto>> GetAllAppointmentsAsync()
         {
             return await _context.Appointments
+                .AsNoTracking() 
                 .Include(a => a.Patient)
                 .Include(a => a.Doctor)
-                .ThenInclude(d => d!.User)
+                    .ThenInclude(d => d!.User)
                 .OrderByDescending(a => a.AppointmentDate)
                 .Select(a => MapToResponseDto(a))
                 .ToListAsync();
@@ -95,21 +76,36 @@ namespace Clinic_Management_System.Services
         public async Task<List<AppointmentResponseDto>> GetAppointmentsByDoctorIdAsync(int doctorId)
         {
             return await _context.Appointments
+                .AsNoTracking() 
                 .Include(a => a.Patient)
                 .Include(a => a.Doctor)
-                .ThenInclude(d => d!.User)
+                    .ThenInclude(d => d!.User)
                 .Where(a => a.DoctorId == doctorId)
                 .OrderByDescending(a => a.AppointmentDate)
                 .Select(a => MapToResponseDto(a))
                 .ToListAsync();
         }
 
+        //  NEW METHOD - Get appointments by UserId (for doctors)
+        public async Task<List<AppointmentResponseDto>> GetAppointmentsByUserIdAsync(string userId)
+        {
+            var doctor = await _context.Doctors
+                .AsNoTracking()
+                .FirstOrDefaultAsync(d => d.UserId == userId);
+
+            if (doctor == null)
+                throw new KeyNotFoundException("Doctor profile not found");
+
+            return await GetAppointmentsByDoctorIdAsync(doctor.Id);
+        }
+
         public async Task<List<AppointmentResponseDto>> GetAppointmentsByPatientIdAsync(int patientId)
         {
             return await _context.Appointments
+                .AsNoTracking() 
                 .Include(a => a.Patient)
                 .Include(a => a.Doctor)
-                .ThenInclude(d => d!.User)
+                    .ThenInclude(d => d!.User)
                 .Where(a => a.PatientId == patientId)
                 .OrderByDescending(a => a.AppointmentDate)
                 .Select(a => MapToResponseDto(a))
@@ -121,42 +117,18 @@ namespace Clinic_Management_System.Services
             var appointment = await _context.Appointments
                 .Include(a => a.Patient)
                 .Include(a => a.Doctor)
-                .ThenInclude(d => d!.User)
+                    .ThenInclude(d => d!.User)
                 .FirstOrDefaultAsync(a => a.Id == id);
 
             if (appointment == null)
                 return null;
 
-            // Validate future date
-            if (request.AppointmentDate <= DateTime.Now)
-                throw new ArgumentException("Appointment must be scheduled for a future date and time");
+            await ValidateFutureDateAsync(request.AppointmentDate);
 
-            // If date/time changed, validate schedule and availability
             if (appointment.AppointmentDate != request.AppointmentDate)
             {
-                var dayOfWeek = request.AppointmentDate.DayOfWeek;
-                var appointmentTime = request.AppointmentDate.TimeOfDay;
-
-                var hasSchedule = await _context.DoctorSchedules
-                    .AnyAsync(s => s.DoctorId == appointment.DoctorId
-                        && s.DayOfWeek == dayOfWeek
-                        && s.StartTime <= appointmentTime
-                        && s.EndTime >= appointmentTime.Add(TimeSpan.FromMinutes(SlotDurationMinutes)));
-
-                if (!hasSchedule)
-                    throw new InvalidOperationException("Doctor is not available at the requested time");
-
-                // Check for double-booking (excluding current appointment)
-                var isBooked = await _context.Appointments
-                    .AnyAsync(a => a.Id != id
-                        && a.DoctorId == appointment.DoctorId
-                        && a.AppointmentDate == request.AppointmentDate
-                        && a.Status == AppointmentStatus.Scheduled);
-
-                if (isBooked)
-                    throw new InvalidOperationException("This time slot is already booked");
-
-                // Mark old status as rescheduled if date changed
+                await ValidateDoctorScheduleAsync(appointment.DoctorId, request.AppointmentDate);
+                await ValidateNoDoubleBookingAsync(appointment.DoctorId, request.AppointmentDate, id);
                 appointment.Status = AppointmentStatus.Rescheduled;
             }
 
@@ -166,26 +138,36 @@ namespace Clinic_Management_System.Services
 
             await _context.SaveChangesAsync();
 
+            _logger.LogInformation("Appointment {AppointmentId} updated successfully", id);
+
             return MapToResponseDto(appointment);
         }
 
-        public async Task<AppointmentResponseDto?> UpdateAppointmentStatusAsync(int id, AppointmentStatusUpdateDto request)
+        public async Task<bool> MarkAsCompletedAsync(int id, string userId)
         {
-            var appointment = await _context.Appointments
-                .Include(a => a.Patient)
-                .Include(a => a.Doctor)
-                .ThenInclude(d => d!.User)
-                .FirstOrDefaultAsync(a => a.Id == id);
+            var doctor = await _context.Doctors
+                .AsNoTracking()
+                .FirstOrDefaultAsync(d => d.UserId == userId);
 
+            if (doctor == null)
+                throw new KeyNotFoundException("Doctor profile not found");
+
+            var appointment = await _context.Appointments.FindAsync(id);
             if (appointment == null)
-                return null;
+                return false;
 
-            appointment.Status = request.Status;
+            if (appointment.DoctorId != doctor.Id)
+                throw new UnauthorizedAccessException("You can only mark your own appointments as completed");
+
+            appointment.Status = AppointmentStatus.Completed;
             appointment.UpdatedAt = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
 
-            return MapToResponseDto(appointment);
+            _logger.LogInformation("Appointment {AppointmentId} marked as completed by Doctor {DoctorId}",
+                id, doctor.Id);
+
+            return true;
         }
 
         public async Task<bool> CancelAppointmentAsync(int id)
@@ -198,26 +180,67 @@ namespace Clinic_Management_System.Services
             appointment.UpdatedAt = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
+
+            _logger.LogInformation("Appointment {AppointmentId} cancelled", id);
+
             return true;
         }
 
-        public async Task<bool> MarkAsCompletedAsync(int id, int doctorId)
+        //  PRIVATE VALIDATION METHODS - Keep business logic in service
+        private async Task ValidateFutureDateAsync(DateTime appointmentDate)
         {
-            var appointment = await _context.Appointments.FindAsync(id);
-            if (appointment == null)
-                return false;
-
-            // Verify appointment belongs to this doctor
-            if (appointment.DoctorId != doctorId)
-                throw new UnauthorizedAccessException("You can only mark your own appointments as completed");
-
-            appointment.Status = AppointmentStatus.Completed;
-            appointment.UpdatedAt = DateTime.UtcNow;
-
-            await _context.SaveChangesAsync();
-            return true;
+            if (appointmentDate <= DateTime.Now)
+                throw new ArgumentException("Appointment must be scheduled for a future date and time");
         }
 
+        private async Task ValidatePatientExistsAsync(int patientId)
+        {
+            var exists = await _context.Patients.AnyAsync(p => p.Id == patientId);
+            if (!exists)
+                throw new ArgumentException("Patient not found");
+        }
+
+        private async Task ValidateDoctorExistsAsync(int doctorId)
+        {
+            var exists = await _context.Doctors.AnyAsync(d => d.Id == doctorId);
+            if (!exists)
+                throw new ArgumentException("Doctor not found");
+        }
+
+        private async Task ValidateDoctorScheduleAsync(int doctorId, DateTime appointmentDate)
+        {
+            var dayOfWeek = appointmentDate.DayOfWeek;
+            var appointmentTime = appointmentDate.TimeOfDay;
+
+            var hasSchedule = await _context.DoctorSchedules
+                .AsNoTracking()
+                .AnyAsync(s => s.DoctorId == doctorId
+                    && s.DayOfWeek == dayOfWeek
+                    && s.StartTime <= appointmentTime
+                    && s.EndTime >= appointmentTime.Add(TimeSpan.FromMinutes(SlotDurationMinutes)));
+
+            if (!hasSchedule)
+                throw new InvalidOperationException("Doctor is not available at the requested time");
+        }
+
+        private async Task ValidateNoDoubleBookingAsync(int doctorId, DateTime appointmentDate, int? excludeAppointmentId = null)
+        {
+            var query = _context.Appointments
+                .AsNoTracking()
+                .Where(a => a.DoctorId == doctorId
+                    && a.AppointmentDate == appointmentDate
+                    && a.Status == AppointmentStatus.Scheduled);
+
+            if (excludeAppointmentId.HasValue)
+                query = query.Where(a => a.Id != excludeAppointmentId.Value);
+
+            var isBooked = await query.AnyAsync();
+
+            if (isBooked)
+                throw new InvalidOperationException("This time slot is already booked");
+        }
+
+        //  PRIVATE MAPPING METHOD - Consistent DTO mapping
         private static AppointmentResponseDto MapToResponseDto(Appointment appointment)
         {
             return new AppointmentResponseDto

@@ -1,9 +1,7 @@
-﻿using Clinic_Management_System.Data;
-using Clinic_Management_System.DTOs.Appointments;
+﻿using Clinic_Management_System.DTOs.Appointments;
 using Clinic_Management_System.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 
 namespace Clinic_Management_System.Controllers
@@ -14,143 +12,142 @@ namespace Clinic_Management_System.Controllers
     public class AppointmentsController : ControllerBase
     {
         private readonly IAppointmentService _appointmentService;
-        private readonly ApplicationDbContext _context;
+        private readonly ILogger<AppointmentsController> _logger;
 
-        public AppointmentsController(IAppointmentService appointmentService, ApplicationDbContext context)
+        public AppointmentsController(
+            IAppointmentService appointmentService,
+            ILogger<AppointmentsController> logger)
         {
             _appointmentService = appointmentService;
-            _context = context;
+            _logger = logger;
         }
 
-        // POST: api/Appointments
+        /// <summary>
+        /// Creates a new appointment
+        /// </summary>
+        /// <param name="request">Appointment details</param>
+        /// <returns>Created appointment</returns>
         [HttpPost]
         [Authorize(Roles = "Admin,Receptionist")]
+        [ProducesResponseType(typeof(AppointmentResponseDto), StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status409Conflict)]
         public async Task<IActionResult> CreateAppointment([FromBody] AppointmentCreateDto request)
         {
-            try
-            {
-                var appointment = await _appointmentService.CreateAppointmentAsync(request);
-                return CreatedAtAction(nameof(GetAppointment), new { id = appointment.Id }, appointment);
-            }
-            catch (ArgumentException ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
-            catch (InvalidOperationException ex)
-            {
-                return Conflict(new { message = ex.Message });
-            }
+            var appointment = await _appointmentService.CreateAppointmentAsync(request);
+            return CreatedAtAction(nameof(GetAppointment), new { id = appointment.Id }, appointment);
         }
 
-        // GET: api/Appointments
+        /// <summary>
+        /// Gets all appointments (Admin only)
+        /// </summary>
         [HttpGet]
         [Authorize(Roles = "Admin")]
+        [ProducesResponseType(typeof(List<AppointmentResponseDto>), StatusCodes.Status200OK)]
         public async Task<ActionResult<List<AppointmentResponseDto>>> GetAllAppointments()
         {
             var appointments = await _appointmentService.GetAllAppointmentsAsync();
             return Ok(appointments);
         }
 
-        // GET: api/Appointments/my-appointments (For Doctors)
+        /// <summary>
+        /// Gets appointments for the logged-in doctor
+        /// </summary>
         [HttpGet("my-appointments")]
         [Authorize(Roles = "Doctor")]
+        [ProducesResponseType(typeof(List<AppointmentResponseDto>), StatusCodes.Status200OK)]
         public async Task<ActionResult<List<AppointmentResponseDto>>> GetMyAppointments()
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (string.IsNullOrEmpty(userId))
                 return Unauthorized();
 
-            // Get doctor ID from userId
-            var doctor = await _context.Doctors.FirstOrDefaultAsync(d => d.UserId == userId);
-            if (doctor == null)
-                return NotFound(new { message = "Doctor profile not found" });
-
-            var appointments = await _appointmentService.GetAppointmentsByDoctorIdAsync(doctor.Id);
+            var appointments = await _appointmentService.GetAppointmentsByUserIdAsync(userId);
             return Ok(appointments);
         }
 
-        // GET: api/Appointments/5
+        /// <summary>
+        /// Gets a single appointment by ID
+        /// </summary>
         [HttpGet("{id}")]
         [Authorize(Roles = "Admin,Receptionist,Doctor")]
+        [ProducesResponseType(typeof(AppointmentResponseDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<AppointmentResponseDto>> GetAppointment(int id)
         {
             var appointment = await _appointmentService.GetAppointmentByIdAsync(id);
             if (appointment == null)
                 return NotFound(new { message = "Appointment not found" });
 
-            // If user is a doctor, verify they own this appointment
-            if (User.IsInRole("Doctor"))
+            // Doctor authorization check
+            if (User.IsInRole("Doctor") && !User.IsInRole("Admin"))
             {
                 var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-                var doctor = await _context.Doctors.FirstOrDefaultAsync(d => d.UserId == userId);
+                var doctorAppointments = await _appointmentService.GetAppointmentsByUserIdAsync(userId!);
 
-                if (doctor == null || appointment.DoctorId != doctor.Id)
+                if (!doctorAppointments.Any(a => a.Id == id))
                     return Forbid();
             }
 
             return Ok(appointment);
         }
 
-        // GET: api/Appointments/patient/5
+        /// <summary>
+        /// Gets appointments for a specific patient
+        /// </summary>
         [HttpGet("patient/{patientId}")]
         [Authorize(Roles = "Admin,Receptionist")]
+        [ProducesResponseType(typeof(List<AppointmentResponseDto>), StatusCodes.Status200OK)]
         public async Task<ActionResult<List<AppointmentResponseDto>>> GetAppointmentsByPatient(int patientId)
         {
             var appointments = await _appointmentService.GetAppointmentsByPatientIdAsync(patientId);
             return Ok(appointments);
         }
 
-        // PUT: api/Appointments/5
+        /// <summary>
+        /// Updates an existing appointment
+        /// </summary>
         [HttpPut("{id}")]
         [Authorize(Roles = "Admin,Receptionist")]
+        [ProducesResponseType(typeof(AppointmentResponseDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> UpdateAppointment(int id, [FromBody] AppointmentUpdateDto request)
         {
-            try
-            {
-                var appointment = await _appointmentService.UpdateAppointmentAsync(id, request);
-                if (appointment == null)
-                    return NotFound(new { message = "Appointment not found" });
+            var appointment = await _appointmentService.UpdateAppointmentAsync(id, request);
+            if (appointment == null)
+                return NotFound(new { message = "Appointment not found" });
 
-                return Ok(appointment);
-            }
-            catch (ArgumentException ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
-            catch (InvalidOperationException ex)
-            {
-                return Conflict(new { message = ex.Message });
-            }
+            return Ok(appointment);
         }
 
-        // POST: api/Appointments/5/complete
+        /// <summary>
+        /// Marks an appointment as completed (Doctor only)
+        /// </summary>
         [HttpPost("{id}/complete")]
         [Authorize(Roles = "Doctor")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         public async Task<IActionResult> MarkAsCompleted(int id)
         {
-            try
-            {
-                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-                var doctor = await _context.Doctors.FirstOrDefaultAsync(d => d.UserId == userId);
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized();
 
-                if (doctor == null)
-                    return NotFound(new { message = "Doctor profile not found" });
+            var result = await _appointmentService.MarkAsCompletedAsync(id, userId);
+            if (!result)
+                return NotFound(new { message = "Appointment not found" });
 
-                var result = await _appointmentService.MarkAsCompletedAsync(id, doctor.Id);
-                if (!result)
-                    return NotFound(new { message = "Appointment not found" });
-
-                return Ok(new { message = "Appointment marked as completed" });
-            }
-            catch (UnauthorizedAccessException)
-            {
-                return Forbid();
-            }
+            return Ok(new { message = "Appointment marked as completed" });
         }
 
-        // POST: api/Appointments/5/cancel
+        /// <summary>
+        /// Cancels an appointment
+        /// </summary>
         [HttpPost("{id}/cancel")]
         [Authorize(Roles = "Admin,Receptionist")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> CancelAppointment(int id)
         {
             var result = await _appointmentService.CancelAppointmentAsync(id);
@@ -158,18 +155,6 @@ namespace Clinic_Management_System.Controllers
                 return NotFound(new { message = "Appointment not found" });
 
             return Ok(new { message = "Appointment cancelled successfully" });
-        }
-
-        // PUT: api/Appointments/5/status
-        [HttpPut("{id}/status")]
-        [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> UpdateStatus(int id, [FromBody] AppointmentStatusUpdateDto request)
-        {
-            var appointment = await _appointmentService.UpdateAppointmentStatusAsync(id, request);
-            if (appointment == null)
-                return NotFound(new { message = "Appointment not found" });
-
-            return Ok(appointment);
         }
     }
 }

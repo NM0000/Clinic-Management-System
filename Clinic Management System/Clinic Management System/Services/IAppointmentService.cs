@@ -8,10 +8,10 @@ namespace Clinic_Management_System.Services
         Task<AppointmentResponseDto?> GetAppointmentByIdAsync(int id);
         Task<List<AppointmentResponseDto>> GetAllAppointmentsAsync();
         Task<List<AppointmentResponseDto>> GetAppointmentsByDoctorIdAsync(int doctorId);
+        Task<List<AppointmentResponseDto>> GetAppointmentsByUserIdAsync(string userId);
         Task<List<AppointmentResponseDto>> GetAppointmentsByPatientIdAsync(int patientId);
         Task<AppointmentResponseDto?> UpdateAppointmentAsync(int id, AppointmentUpdateDto request);
-        Task<AppointmentResponseDto?> UpdateAppointmentStatusAsync(int id, AppointmentStatusUpdateDto request);
+        Task<bool> MarkAsCompletedAsync(int id, string userId); 
         Task<bool> CancelAppointmentAsync(int id);
-        Task<bool> MarkAsCompletedAsync(int id, int doctorId);
     }
 }

@@ -7,6 +7,10 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace HospitalManagementAPI.Controllers
 {
+    /// <summary>
+    /// Controller responsible for managing application users.
+    /// Requires the caller to be in the "Admin" role.
+    /// </summary>
     [Route("api/[controller]")]
     [ApiController]
     [Authorize(Roles = "Admin")]
@@ -15,12 +19,27 @@ namespace HospitalManagementAPI.Controllers
         private readonly UserManager<AppUser> _userManager;
         private readonly ApplicationDbContext _context;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="UsersController"/> class.
+        /// </summary>
+        /// <param name="userManager">User manager used to create and manage <see cref="AppUser"/> accounts.</param>
+        /// <param name="context">The application's <see cref="ApplicationDbContext"/>.</param>
         public UsersController(UserManager<AppUser> userManager, ApplicationDbContext context)
         {
             _userManager = userManager;
             _context = context;
         }
 
+        /// <summary>
+        /// Creates a new user with the specified role. Allowed roles are "Doctor" and "Receptionist".
+        /// When creating a Doctor user, additional doctor-specific fields are required and a <see cref="Doctor"/> entity will be created.
+        /// </summary>
+        /// <param name="request">The <see cref="UserCreateRequestDto"/> containing user and role information.</param>
+        /// <returns>
+        /// Returns 200 OK with created user info on success,
+        /// 400 BadRequest for validation errors,
+        /// or 409 Conflict if a user with the same email already exists.
+        /// </returns>
         [HttpPost("create")]
         public async Task<IActionResult> CreateUser([FromBody] UserCreateRequestDto request)
         {

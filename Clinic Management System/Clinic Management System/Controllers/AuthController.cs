@@ -9,6 +9,9 @@ using System.Text;
 
 namespace Clinic_Management_System.Controllers
 {
+    /// <summary>
+    /// Controller responsible for authentication endpoints (login) and JWT creation.
+    /// </summary>
     [Route("api/[controller]")]
     [ApiController]
     public class AuthController : ControllerBase
@@ -16,12 +19,25 @@ namespace Clinic_Management_System.Controllers
         private readonly UserManager<AppUser> _userManager;
         private readonly IConfiguration _configuration;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="AuthController"/> class.
+        /// </summary>
+        /// <param name="userManager">The user manager used to manage <see cref="AppUser"/> instances.</param>
+        /// <param name="configuration">Application configuration containing JWT settings.</param>
         public AuthController(UserManager<AppUser> userManager, IConfiguration configuration)
         {
             _userManager = userManager;
             _configuration = configuration;
         }
 
+        /// <summary>
+        /// Authenticates a user with email and password and returns a JWT token and user info.
+        /// </summary>
+        /// <param name="request">Login request DTO containing Email and Password.</param>
+        /// <returns>
+        /// 200 OK with <see cref="TokenResponseDto"/> when authentication succeeds;
+        /// 401 Unauthorized when credentials are invalid.
+        /// </returns>
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginRequestDto request)
         {
@@ -47,6 +63,12 @@ namespace Clinic_Management_System.Controllers
             return Ok(response);
         }
 
+        /// <summary>
+        /// Generates a signed JWT for the specified user and roles.
+        /// </summary>
+        /// <param name="user">The authenticated application user.</param>
+        /// <param name="roles">List of role names assigned to the user.</param>
+        /// <returns>The serialized JWT as a string.</returns>
         private string GenerateJwtToken(AppUser user, List<string> roles)
         {
             var jwtSettings = _configuration.GetSection("JwtSettings");

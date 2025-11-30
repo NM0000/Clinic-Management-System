@@ -6,16 +6,43 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace Clinic_Management_System.Data
 {
+    /// <summary>
+    /// EF Core <see cref="DbContext"/> for the Clinic Management System that includes Identity and application entities.
+    /// </summary>
     public class ApplicationDbContext: IdentityDbContext<AppUser>
     {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ApplicationDbContext"/> class.
+        /// </summary>
+        /// <param name="options">The options used by a <see cref="DbContext"/>.</param>
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext>options): base(options)
         { 
         }
+
+        /// <summary>
+        /// Gets or sets the doctors in the system.
+        /// </summary>
         public DbSet<Doctor> Doctors { get; set; }
+
+        /// <summary>
+        /// Gets or sets the patients in the system.
+        /// </summary>
         public DbSet<Patient> Patients { get; set; }
+
+        /// <summary>
+        /// Gets or sets the Doctor schedules in the system.
+        /// </summary>
         public DbSet<DoctorSchedule> DoctorSchedules { get; set; }
+
+        /// <summary>
+        /// Gets or sets the Appointments in the system.
+        /// </summary>
         public DbSet<Appointment> Appointments { get; set; }
 
+        /// <summary>
+        /// Configure the EF Core model for the application.
+        /// </summary>
+        /// <param name="builder">The <see cref="ModelBuilder"/> used to configure entity mappings.</param>
         protected override void OnModelCreating(ModelBuilder builder)
         {
             foreach (var entityType in builder.Model.GetEntityTypes())

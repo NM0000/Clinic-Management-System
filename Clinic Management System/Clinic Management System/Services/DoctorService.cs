@@ -113,12 +113,37 @@ namespace Clinic_Management_System.Services
 
         public async Task<bool> DeleteDoctorAsync(int id)
         {
-            var doctor = await _context.Doctors.FindAsync(id);
+            var doctor = await _context.Doctors
+                .Include(d => d.User)
+                .FirstOrDefaultAsync(d => d.Id == id);
+
             if (doctor == null)
                 return false;
 
+            // Check if doctor has any appointments
+            var hasAppointments = await _context.Appointments
+                .AnyAsync(a => a.DoctorId == id);
+
+            if (hasAppointments)
+                throw new InvalidOperationException("Cannot delete doctor with existing appointments. Please reassign or cancel appointments first.");
+
+            // Store userId before deleting doctor
+            var userId = doctor.UserId;
+
+            // Delete doctor profile
             _context.Doctors.Remove(doctor);
             await _context.SaveChangesAsync();
+
+            // Delete associated user account
+            if (!string.IsNullOrEmpty(userId))
+            {
+                var user = await _userManager.FindByIdAsync(userId);
+                if (user != null)
+                {
+                    await _userManager.DeleteAsync(user);
+                }
+            }
+
             return true;
         }
     }

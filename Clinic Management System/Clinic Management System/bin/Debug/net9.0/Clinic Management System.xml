@@ -1,0 +1,195 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Clinic Management System</name>
+    </assembly>
+    <members>
+        <member name="M:Clinic_Management_System.Controllers.AppointmentsController.CreateAppointment(Clinic_Management_System.DTOs.Appointments.AppointmentCreateDto)">
+            <summary>
+            Creates a new appointment
+            </summary>
+            <param name="request">Appointment details</param>
+            <returns>Created appointment</returns>
+        </member>
+        <member name="M:Clinic_Management_System.Controllers.AppointmentsController.GetAllAppointments">
+            <summary>
+            Gets all appointments (Admin only)
+            </summary>
+        </member>
+        <member name="M:Clinic_Management_System.Controllers.AppointmentsController.GetMyAppointments">
+            <summary>
+            Gets appointments for the logged-in doctor
+            </summary>
+        </member>
+        <member name="M:Clinic_Management_System.Controllers.AppointmentsController.GetAppointment(System.Int32)">
+            <summary>
+            Gets a single appointment by ID
+            </summary>
+        </member>
+        <member name="M:Clinic_Management_System.Controllers.AppointmentsController.GetAppointmentsByPatient(System.Int32)">
+            <summary>
+            Gets appointments for a specific patient
+            </summary>
+        </member>
+        <member name="M:Clinic_Management_System.Controllers.AppointmentsController.UpdateAppointment(System.Int32,Clinic_Management_System.DTOs.Appointments.AppointmentUpdateDto)">
+            <summary>
+            Updates an existing appointment
+            </summary>
+        </member>
+        <member name="M:Clinic_Management_System.Controllers.AppointmentsController.MarkAsCompleted(System.Int32)">
+            <summary>
+            Marks an appointment as completed (Doctor only)
+            </summary>
+        </member>
+        <member name="M:Clinic_Management_System.Controllers.AppointmentsController.CancelAppointment(System.Int32)">
+            <summary>
+            Cancels an appointment
+            </summary>
+        </member>
+        <member name="T:Clinic_Management_System.Data.ApplicationDbContext">
+            <summary>
+            EF Core <see cref="T:Microsoft.EntityFrameworkCore.DbContext"/> for the Clinic Management System that includes Identity and application entities.
+            </summary>
+        </member>
+        <member name="M:Clinic_Management_System.Data.ApplicationDbContext.#ctor(Microsoft.EntityFrameworkCore.DbContextOptions{Clinic_Management_System.Data.ApplicationDbContext})">
+            <summary>
+            Initializes a new instance of the <see cref="T:Clinic_Management_System.Data.ApplicationDbContext"/> class.
+            </summary>
+            <param name="options">The options used by a <see cref="T:Microsoft.EntityFrameworkCore.DbContext"/>.</param>
+        </member>
+        <member name="P:Clinic_Management_System.Data.ApplicationDbContext.Doctors">
+            <summary>
+            Gets or sets the doctors in the system.
+            </summary>
+        </member>
+        <member name="P:Clinic_Management_System.Data.ApplicationDbContext.Patients">
+            <summary>
+            Gets or sets the patients in the system.
+            </summary>
+        </member>
+        <member name="P:Clinic_Management_System.Data.ApplicationDbContext.DoctorSchedules">
+            <summary>
+            Gets or sets the Doctor schedules in the system.
+            </summary>
+        </member>
+        <member name="P:Clinic_Management_System.Data.ApplicationDbContext.Appointments">
+            <summary>
+            Gets or sets the Appointments in the system.
+            </summary>
+        </member>
+        <member name="M:Clinic_Management_System.Data.ApplicationDbContext.OnModelCreating(Microsoft.EntityFrameworkCore.ModelBuilder)">
+            <summary>
+            Configure the EF Core model for the application.
+            </summary>
+            <param name="builder">The <see cref="T:Microsoft.EntityFrameworkCore.ModelBuilder"/> used to configure entity mappings.</param>
+        </member>
+        <member name="T:Clinic_Management_System.Migrations.initial">
+            <inheritdoc />
+        </member>
+        <member name="M:Clinic_Management_System.Migrations.initial.Up(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:Clinic_Management_System.Migrations.initial.Down(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:Clinic_Management_System.Migrations.initial.BuildTargetModel(Microsoft.EntityFrameworkCore.ModelBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="T:Clinic_Management_System.Migrations.InitialIdentity">
+            <inheritdoc />
+        </member>
+        <member name="M:Clinic_Management_System.Migrations.InitialIdentity.Up(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:Clinic_Management_System.Migrations.InitialIdentity.Down(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:Clinic_Management_System.Migrations.InitialIdentity.BuildTargetModel(Microsoft.EntityFrameworkCore.ModelBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="T:Clinic_Management_System.Migrations.AddSoftDeleteToPatient">
+            <inheritdoc />
+        </member>
+        <member name="M:Clinic_Management_System.Migrations.AddSoftDeleteToPatient.Up(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:Clinic_Management_System.Migrations.AddSoftDeleteToPatient.Down(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:Clinic_Management_System.Migrations.AddSoftDeleteToPatient.BuildTargetModel(Microsoft.EntityFrameworkCore.ModelBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="T:Clinic_Management_System.Migrations.AddScheduleAndAppointmentTables">
+            <inheritdoc />
+        </member>
+        <member name="M:Clinic_Management_System.Migrations.AddScheduleAndAppointmentTables.Up(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:Clinic_Management_System.Migrations.AddScheduleAndAppointmentTables.Down(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:Clinic_Management_System.Migrations.AddScheduleAndAppointmentTables.BuildTargetModel(Microsoft.EntityFrameworkCore.ModelBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="T:Clinic_Management_System.Migrations.ApplicationDbTimeConstraint">
+            <inheritdoc />
+        </member>
+        <member name="M:Clinic_Management_System.Migrations.ApplicationDbTimeConstraint.Up(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:Clinic_Management_System.Migrations.ApplicationDbTimeConstraint.Down(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:Clinic_Management_System.Migrations.ApplicationDbTimeConstraint.BuildTargetModel(Microsoft.EntityFrameworkCore.ModelBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="T:Clinic_Management_System.Migrations.GlobalQueryForAppointments">
+            <inheritdoc />
+        </member>
+        <member name="M:Clinic_Management_System.Migrations.GlobalQueryForAppointments.Up(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:Clinic_Management_System.Migrations.GlobalQueryForAppointments.Down(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:Clinic_Management_System.Migrations.GlobalQueryForAppointments.BuildTargetModel(Microsoft.EntityFrameworkCore.ModelBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="T:Clinic_Management_System.Migrations.GlobalQueryForAppointment">
+            <inheritdoc />
+        </member>
+        <member name="M:Clinic_Management_System.Migrations.GlobalQueryForAppointment.Up(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:Clinic_Management_System.Migrations.GlobalQueryForAppointment.Down(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:Clinic_Management_System.Migrations.GlobalQueryForAppointment.BuildTargetModel(Microsoft.EntityFrameworkCore.ModelBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="T:Clinic_Management_System.Migrations.DeleteDoctorsRevised">
+            <inheritdoc />
+        </member>
+        <member name="M:Clinic_Management_System.Migrations.DeleteDoctorsRevised.Up(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:Clinic_Management_System.Migrations.DeleteDoctorsRevised.Down(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:Clinic_Management_System.Migrations.DeleteDoctorsRevised.BuildTargetModel(Microsoft.EntityFrameworkCore.ModelBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="T:Clinic_Management_System.Migrations.SwaggerUpdate">
+            <inheritdoc />
+        </member>
+        <member name="M:Clinic_Management_System.Migrations.SwaggerUpdate.Up(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:Clinic_Management_System.Migrations.SwaggerUpdate.Down(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:Clinic_Management_System.Migrations.SwaggerUpdate.BuildTargetModel(Microsoft.EntityFrameworkCore.ModelBuilder)">
+            <inheritdoc />
+        </member>
+    </members>
+</doc>
