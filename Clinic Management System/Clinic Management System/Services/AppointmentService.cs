@@ -240,6 +240,131 @@ namespace Clinic_Management_System.Services
                 throw new InvalidOperationException("This time slot is already booked");
         }
 
+        public async Task<PagedResult<AppointmentResponseDto>> GetAppointmentsAdvancedAsync(
+    AppointmentSearchDto searchDto,
+    string? currentUserId,
+    string? userRole)
+        {
+            // 1. Start the Query
+            // We use AsNoTracking for read-performance
+            var query = _context.Appointments
+                .AsNoTracking()
+                .Include(a => a.Patient)
+                .Include(a => a.Doctor)
+                    .ThenInclude(d => d!.User) // Join to AppUser to get Doctor Name
+                .AsQueryable();
+
+            // 2. Security / Role-Based Filtering
+            // If the user is a Doctor, they should ONLY see their own appointments, 
+            // regardless of what filter they send.
+            if (userRole == "Doctor" && !string.IsNullOrEmpty(currentUserId))
+            {
+                var doctor = await _context.Doctors.FirstOrDefaultAsync(d => d.UserId == currentUserId);
+                if (doctor != null)
+                {
+                    query = query.Where(a => a.DoctorId == doctor.Id);
+                }
+            }
+
+            // 3. Apply Advanced Filters
+
+            // Filter: DoctorId (If provided and user is not a restricted doctor)
+            if (searchDto.DoctorId.HasValue)
+                query = query.Where(a => a.DoctorId == searchDto.DoctorId.Value);
+
+            // Filter: PatientId
+            if (searchDto.PatientId.HasValue)
+                query = query.Where(a => a.PatientId == searchDto.PatientId.Value);
+
+            // Filter: Status
+            if (searchDto.Status.HasValue)
+                query = query.Where(a => a.Status == searchDto.Status.Value);
+
+            // Filter: Date Range
+            if (searchDto.FromDate.HasValue)
+                query = query.Where(a => a.AppointmentDate >= searchDto.FromDate.Value);
+
+            if (searchDto.ToDate.HasValue)
+                query = query.Where(a => a.AppointmentDate <= searchDto.ToDate.Value);
+
+            // Filter: Upcoming Only
+            if (searchDto.UpcomingOnly)
+                query = query.Where(a => a.AppointmentDate > DateTime.UtcNow);
+
+            // Filter: Specialization (Join Logic: Appointment -> Doctor -> Specialization)
+            if (!string.IsNullOrEmpty(searchDto.Specialization))
+            {
+                var spec = searchDto.Specialization.ToLower();
+                query = query.Where(a => a.Doctor!.Specialization.ToLower().Contains(spec));
+            }
+
+            // Filter: Search Term (Complex Join Logic)
+            // Searches: Patient Name OR Doctor Name OR Notes
+            if (!string.IsNullOrEmpty(searchDto.SearchTerm))
+            {
+                var term = searchDto.SearchTerm.ToLower();
+                query = query.Where(a =>
+                    (a.Patient!.FirstName.ToLower() + " " + a.Patient.LastName.ToLower()).Contains(term) || // Patient Name
+                    (a.Doctor!.User!.FullName.ToLower().Contains(term)) || // Doctor Name (via AppUser)
+                    (a.Notes != null && a.Notes.ToLower().Contains(term)) // Notes
+                );
+            }
+
+            // 4. Sorting
+            // Default sort is AppointmentDate descending if nothing provided
+            if (string.IsNullOrEmpty(searchDto.SortBy))
+            {
+                query = query.OrderBy(a => a.AppointmentDate);
+            }
+            else
+            {
+                switch (searchDto.SortBy.ToLower())
+                {
+                    case "patientname":
+                        query = searchDto.IsDescending
+                            ? query.OrderByDescending(a => a.Patient!.FirstName).ThenByDescending(a => a.Patient!.LastName)
+                            : query.OrderBy(a => a.Patient!.FirstName).ThenBy(a => a.Patient!.LastName);
+                        break;
+                    case "doctorname":
+                        query = searchDto.IsDescending
+                            ? query.OrderByDescending(a => a.Doctor!.User!.FullName)
+                            : query.OrderBy(a => a.Doctor!.User!.FullName);
+                        break;
+                    case "status":
+                        query = searchDto.IsDescending
+                            ? query.OrderByDescending(a => a.Status)
+                            : query.OrderBy(a => a.Status);
+                        break;
+                    case "appointmentdate":
+                    default:
+                        query = searchDto.IsDescending
+                            ? query.OrderByDescending(a => a.AppointmentDate)
+                            : query.OrderBy(a => a.AppointmentDate);
+                        break;
+                }
+            }
+
+            // 5. Pagination Logic
+            // Count total records BEFORE pagination for the response
+            var totalCount = await query.CountAsync();
+
+            // Apply Offset and Limit
+            var items = await query
+                .Skip((searchDto.PageNumber - 1) * searchDto.PageSize)
+                .Take(searchDto.PageSize)
+                .Select(a => MapToResponseDto(a)) // Reuse your existing private mapper
+                .ToListAsync();
+
+            // 6. Return Result
+            return new PagedResult<AppointmentResponseDto>
+            {
+                Items = items,
+                TotalCount = totalCount,
+                PageNumber = searchDto.PageNumber,
+                PageSize = searchDto.PageSize
+            };
+        }
+
         //  PRIVATE MAPPING METHOD - Consistent DTO mapping
         private static AppointmentResponseDto MapToResponseDto(Appointment appointment)
         {

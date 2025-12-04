@@ -156,5 +156,27 @@ namespace Clinic_Management_System.Controllers
 
             return Ok(new { message = "Appointment cancelled successfully" });
         }
+
+        /// <summary>
+        /// Advanced search for appointments with pagination, sorting, and filtering.
+        /// </summary>
+        [HttpGet("search")]
+        [Authorize(Roles = "Admin,Receptionist,Doctor")]
+        [ProducesResponseType(typeof(PagedResult<AppointmentResponseDto>), StatusCodes.Status200OK)]
+        public async Task<ActionResult<PagedResult<AppointmentResponseDto>>> SearchAppointments(
+            [FromQuery] AppointmentSearchDto searchParams)
+        {
+            // Get Current User info for security context
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var userRole = User.FindFirstValue(ClaimTypes.Role);
+            // Note: If using standard Identity, Role might need: User.FindAll(ClaimTypes.Role).FirstOrDefault()?.Value
+
+            // If role claim isn't simple string, use this helper:
+            if (string.IsNullOrEmpty(userRole) && User.IsInRole("Doctor")) userRole = "Doctor";
+            if (string.IsNullOrEmpty(userRole) && User.IsInRole("Admin")) userRole = "Admin";
+
+            var result = await _appointmentService.GetAppointmentsAdvancedAsync(searchParams, userId, userRole);
+            return Ok(result);
+        }
     }
 }

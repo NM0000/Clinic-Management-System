@@ -46,6 +46,264 @@
             Cancels an appointment
             </summary>
         </member>
+        <member name="M:Clinic_Management_System.Controllers.AppointmentsController.SearchAppointments(Clinic_Management_System.DTOs.Appointments.AppointmentSearchDto)">
+            <summary>
+            Advanced search for appointments with pagination, sorting, and filtering.
+            </summary>
+        </member>
+        <member name="T:Clinic_Management_System.Controllers.AuthController">
+            <summary>
+            Controller responsible for authentication endpoints (login) and JWT creation.
+            </summary>
+        </member>
+        <member name="M:Clinic_Management_System.Controllers.AuthController.#ctor(Microsoft.AspNetCore.Identity.UserManager{Clinic_Management_System.Models.AppUser},Microsoft.Extensions.Configuration.IConfiguration)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Clinic_Management_System.Controllers.AuthController"/> class.
+            </summary>
+            <param name="userManager">The user manager used to manage <see cref="T:Clinic_Management_System.Models.AppUser"/> instances.</param>
+            <param name="configuration">Application configuration containing JWT settings.</param>
+        </member>
+        <member name="M:Clinic_Management_System.Controllers.AuthController.Login(Clinic_Management_System.DTOs.Auth.LoginRequestDto)">
+            <summary>
+            Authenticates a user with email and password and returns a JWT token and user info.
+            </summary>
+            <param name="request">Login request DTO containing Email and Password.</param>
+            <returns>
+            200 OK with <see cref="T:Clinic_Management_System.DTOs.Auth.TokenResponseDto"/> when authentication succeeds;
+            401 Unauthorized when credentials are invalid.
+            </returns>
+        </member>
+        <member name="M:Clinic_Management_System.Controllers.AuthController.GenerateJwtToken(Clinic_Management_System.Models.AppUser,System.Collections.Generic.List{System.String})">
+            <summary>
+            Generates a signed JWT for the specified user and roles.
+            </summary>
+            <param name="user">The authenticated application user.</param>
+            <param name="roles">List of role names assigned to the user.</param>
+            <returns>The serialized JWT as a string.</returns>
+        </member>
+        <member name="T:Clinic_Management_System.Controllers.DoctorSchedulesController">
+            <summary>
+            Controller exposing API endpoints for managing doctor schedules and available slots.
+            Requires authentication; individual actions enforce role-based access.
+            </summary>
+        </member>
+        <member name="M:Clinic_Management_System.Controllers.DoctorSchedulesController.#ctor(Clinic_Management_System.Services.IScheduleService)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Clinic_Management_System.Controllers.DoctorSchedulesController"/> class.
+            </summary>
+            <param name="scheduleService">Service used to manage doctor schedules (<see cref="T:Clinic_Management_System.Services.IScheduleService"/>).</param>
+        </member>
+        <member name="M:Clinic_Management_System.Controllers.DoctorSchedulesController.CreateSchedule(Clinic_Management_System.DTOs.Schedules.DoctorScheduleCreateDto)">
+            <summary>
+            Creates a new doctor schedule.
+            </summary>
+            <param name="request">The schedule creation DTO (<see cref="T:Clinic_Management_System.DTOs.Schedules.DoctorScheduleCreateDto"/>).</param>
+            <returns>
+            201 Created with the created schedule on success;
+            400 BadRequest for invalid input; 409 Conflict for business rule violations.
+            </returns>
+        </member>
+        <member name="M:Clinic_Management_System.Controllers.DoctorSchedulesController.GetSchedule(System.Int32)">
+            <summary>
+            Retrieves a schedule by identifier.
+            </summary>
+            <param name="id">Schedule identifier.</param>
+            <returns>200 OK with <see cref="T:Clinic_Management_System.DTOs.Schedules.DoctorScheduleResponseDto"/> when found; 404 NotFound otherwise.</returns>
+        </member>
+        <member name="M:Clinic_Management_System.Controllers.DoctorSchedulesController.GetSchedulesByDoctor(System.Int32)">
+            <summary>
+            Retrieves schedules for a specified doctor.
+            </summary>
+            <param name="doctorId">Doctor identifier.</param>
+            <returns>200 OK with a list of <see cref="T:Clinic_Management_System.DTOs.Schedules.DoctorScheduleResponseDto"/>.</returns>
+        </member>
+        <member name="M:Clinic_Management_System.Controllers.DoctorSchedulesController.UpdateSchedule(System.Int32,Clinic_Management_System.DTOs.Schedules.DoctorScheduleUpdateDto)">
+            <summary>
+            Updates an existing schedule.
+            </summary>
+            <param name="id">Schedule identifier.</param>
+            <param name="request">The schedule update DTO (<see cref="T:Clinic_Management_System.DTOs.Schedules.DoctorScheduleUpdateDto"/>).</param>
+            <returns>200 OK with the updated schedule; 404 NotFound if not found; 400/409 on validation/business errors.</returns>
+        </member>
+        <member name="M:Clinic_Management_System.Controllers.DoctorSchedulesController.DeleteSchedule(System.Int32)">
+            <summary>
+            Deletes a schedule by identifier.
+            </summary>
+            <param name="id">Schedule identifier.</param>
+            <returns>200 OK on success; 404 NotFound when the schedule does not exist.</returns>
+        </member>
+        <member name="M:Clinic_Management_System.Controllers.DoctorSchedulesController.GetAvailableSlots(Clinic_Management_System.DTOs.Schedules.AvailableSlotsRequestDto)">
+            <summary>
+            Returns available appointment slots for a doctor in a given date/time range.
+            </summary>
+            <param name="request">Request DTO describing the doctor and date range (<see cref="T:Clinic_Management_System.DTOs.Schedules.AvailableSlotsRequestDto"/>).</param>
+            <returns>200 OK with <see cref="T:Clinic_Management_System.DTOs.Schedules.AvailableSlotsResponseDto"/> describing available slots; 400 BadRequest for invalid requests.</returns>
+        </member>
+        <member name="T:Clinic_Management_System.Controllers.DoctorsController">
+            <summary>
+            API endpoints for creating, retrieving, updating and deleting doctors.
+            Requires the caller to be in the "Admin" role.
+            </summary>
+        </member>
+        <member name="M:Clinic_Management_System.Controllers.DoctorsController.#ctor(Clinic_Management_System.Services.IDoctorService)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Clinic_Management_System.Controllers.DoctorsController"/> class.
+            </summary>
+            <param name="doctorService">Service used to manage doctors (<see cref="T:Clinic_Management_System.Services.IDoctorService"/>).</param>
+        </member>
+        <member name="M:Clinic_Management_System.Controllers.DoctorsController.CreateDoctor(Clinic_Management_System.DTOs.Doctors.DoctorCreateRequestDto)">
+            <summary>
+            Creates a new doctor.
+            </summary>
+            <param name="request">Request DTO containing doctor creation data (<see cref="T:Clinic_Management_System.DTOs.Doctors.DoctorCreateRequestDto"/>).</param>
+            <returns>
+            201 Created with the created <see cref="T:Clinic_Management_System.DTOs.Doctors.DoctorResponseDto"/> on success;
+            400 BadRequest for invalid input; 409 Conflict for business rule violations.
+            </returns>
+        </member>
+        <member name="M:Clinic_Management_System.Controllers.DoctorsController.GetAllDoctors">
+            <summary>
+            Retrieves all doctors.
+            </summary>
+            <returns>200 OK with a list of <see cref="T:Clinic_Management_System.DTOs.Doctors.DoctorListResponseDto"/>.</returns>
+        </member>
+        <member name="M:Clinic_Management_System.Controllers.DoctorsController.GetDoctor(System.Int32)">
+            <summary>
+            Retrieves a doctor by identifier.
+            </summary>
+            <param name="id">Doctor identifier.</param>
+            <returns>200 OK with <see cref="T:Clinic_Management_System.DTOs.Doctors.DoctorResponseDto"/> when found; 404 NotFound otherwise.</returns>
+        </member>
+        <member name="M:Clinic_Management_System.Controllers.DoctorsController.UpdateDoctor(System.Int32,Clinic_Management_System.DTOs.Doctors.DoctorUpdateRequestDto)">
+            <summary>
+            Updates an existing doctor.
+            </summary>
+            <param name="id">Doctor identifier.</param>
+            <param name="request">Update DTO (<see cref="T:Clinic_Management_System.DTOs.Doctors.DoctorUpdateRequestDto"/>).</param>
+            <returns>200 OK with the updated doctor; 404 NotFound if not found.</returns>
+        </member>
+        <member name="M:Clinic_Management_System.Controllers.DoctorsController.DeleteDoctor(System.Int32)">
+            <summary>
+            Deletes a doctor by identifier.
+            </summary>
+            <param name="id">Doctor identifier.</param>
+            <returns>200 OK on success; 404 NotFound when the doctor does not exist.</returns>
+        </member>
+        <member name="T:Clinic_Management_System.Controllers.HomeController">
+            <summary>
+            Handles application home pages such as Index, Privacy and Error views.
+            </summary>
+        </member>
+        <member name="M:Clinic_Management_System.Controllers.HomeController.Index">
+            <summary>
+            Displays the application home page.
+            </summary>
+            <returns>The Index view.</returns>
+        </member>
+        <member name="M:Clinic_Management_System.Controllers.HomeController.Privacy">
+            <summary>
+            Displays the privacy information page.
+            </summary>
+            <returns>The Privacy view.</returns>
+        </member>
+        <member name="M:Clinic_Management_System.Controllers.HomeController.Error">
+            <summary>
+            Displays the error page with request information.
+            </summary>
+            <returns>The Error view populated with an <see cref="T:Clinic_Management_System.Models.ErrorViewModel"/>.</returns>
+        </member>
+        <member name="T:Clinic_Management_System.Controllers.PatientsController">
+            <summary>
+            API endpoints for creating, retrieving, updating, deleting and restoring patients.
+            Requires authentication; individual actions enforce role-based access.
+            </summary>
+        </member>
+        <member name="M:Clinic_Management_System.Controllers.PatientsController.#ctor(Clinic_Management_System.Services.IPatientService)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Clinic_Management_System.Controllers.PatientsController"/> class.
+            </summary>
+            <param name="patientService">Service used to manage patient records (<see cref="T:Clinic_Management_System.Services.IPatientService"/>).</param>
+        </member>
+        <member name="M:Clinic_Management_System.Controllers.PatientsController.CreatePatient(Clinic_Management_System.DTOs.Patients.PatientCreateRequestDto)">
+            <summary>
+            Creates a new patient record.
+            </summary>
+            <param name="request">The patient creation request DTO (<see cref="T:Clinic_Management_System.DTOs.Patients.PatientCreateRequestDto"/>).</param>
+            <returns>
+            201 Created with the created <see cref="T:Clinic_Management_System.DTOs.Patients.PatientResponseDto"/> when successful;
+            409 Conflict when a patient already exists.
+            </returns>
+        </member>
+        <member name="M:Clinic_Management_System.Controllers.PatientsController.GetAllPatients">
+            <summary>
+            Retrieves a list of all patients.
+            </summary>
+            <returns>200 OK with a list of <see cref="T:Clinic_Management_System.DTOs.Patients.PatientListResponseDto"/>.</returns>
+        </member>
+        <member name="M:Clinic_Management_System.Controllers.PatientsController.GetPatient(System.Int32)">
+            <summary>
+            Retrieves a patient by identifier.
+            If the caller is a Doctor (non-Admin), access is validated against the doctor's appointments.
+            </summary>
+            <param name="id">Patient identifier.</param>
+            <returns>
+            200 OK with <see cref="T:Clinic_Management_System.DTOs.Patients.PatientResponseDto"/> when found;
+            401 Unauthorized if user id claim is missing;
+            403 Forbidden if a doctor has no access; 
+            404 NotFound when the patient does not exist.
+            </returns>
+        </member>
+        <member name="M:Clinic_Management_System.Controllers.PatientsController.UpdatePatient(System.Int32,Clinic_Management_System.DTOs.Patients.PatientUpdateRequestDto)">
+            <summary>
+            Updates an existing patient.
+            </summary>
+            <param name="id">Patient identifier.</param>
+            <param name="request">The update request DTO (<see cref="T:Clinic_Management_System.DTOs.Patients.PatientUpdateRequestDto"/>).</param>
+            <returns>
+            200 OK with the updated patient when successful;
+            404 NotFound when the patient does not exist;
+            409 Conflict on business rule violations.
+            </returns>
+        </member>
+        <member name="M:Clinic_Management_System.Controllers.PatientsController.DeletePatient(System.Int32)">
+            <summary>
+            Soft-deletes a patient by id.
+            </summary>
+            <param name="id">Patient identifier.</param>
+            <returns>200 OK on success; 404 NotFound when the patient does not exist.</returns>
+        </member>
+        <member name="M:Clinic_Management_System.Controllers.PatientsController.RestorePatient(System.Int32)">
+            <summary>
+            Restores a previously soft-deleted patient.
+            </summary>
+            <param name="id">Patient identifier.</param>
+            <returns>200 OK on success; 404 NotFound when the patient does not exist or is not deleted.</returns>
+        </member>
+        <member name="T:Clinic_Management_System.Controllers.UsersController">
+            <summary>
+            Controller responsible for managing application users.
+            Requires the caller to be in the "Admin" role.
+            </summary>
+        </member>
+        <member name="M:Clinic_Management_System.Controllers.UsersController.#ctor(Microsoft.AspNetCore.Identity.UserManager{Clinic_Management_System.Models.AppUser},Clinic_Management_System.Data.ApplicationDbContext)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Clinic_Management_System.Controllers.UsersController"/> class.
+            </summary>
+            <param name="userManager">User manager used to create and manage <see cref="T:Clinic_Management_System.Models.AppUser"/> accounts.</param>
+            <param name="context">The application's <see cref="T:Clinic_Management_System.Data.ApplicationDbContext"/>.</param>
+        </member>
+        <member name="M:Clinic_Management_System.Controllers.UsersController.CreateUser(Clinic_Management_System.DTOs.Auth.UserCreateRequestDto)">
+            <summary>
+            Creates a new user with the specified role. Allowed roles are "Doctor" and "Receptionist".
+            When creating a Doctor user, additional doctor-specific fields are required and a <see cref="T:Clinic_Management_System.Models.Doctor"/> entity will be created.
+            </summary>
+            <param name="request">The <see cref="T:Clinic_Management_System.DTOs.Auth.UserCreateRequestDto"/> containing user and role information.</param>
+            <returns>
+            Returns 200 OK with created user info on success,
+            400 BadRequest for validation errors,
+            or 409 Conflict if a user with the same email already exists.
+            </returns>
+        </member>
         <member name="T:Clinic_Management_System.Data.ApplicationDbContext">
             <summary>
             EF Core <see cref="T:Microsoft.EntityFrameworkCore.DbContext"/> for the Clinic Management System that includes Identity and application entities.

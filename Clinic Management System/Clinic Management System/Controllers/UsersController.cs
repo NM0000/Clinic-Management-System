@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 
-namespace HospitalManagementAPI.Controllers
+namespace Clinic_Management_System.Controllers
 {
     /// <summary>
     /// Controller responsible for managing application users.

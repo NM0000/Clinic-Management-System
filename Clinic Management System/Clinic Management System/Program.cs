@@ -20,19 +20,22 @@ builder.Services.AddScoped<IAppointmentService, AppointmentService>();
 // Add services to the container
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
+
+// 1. Configure Swagger Generator
 builder.Services.AddSwaggerGen(options =>
 {
-options.SwaggerDoc("v1", new OpenApiInfo
-{
-    Version = "v1",
-    Title = "Clinic Management API",
-    Description = "A comprehensive ASP.NET Core Web API for managing hospital operations including appointments, schedules, doctors, and patients.",
-    Contact = new OpenApiContact
+    options.SwaggerDoc("v1", new OpenApiInfo
     {
-        Name = "Clinic Management Team",
-        Email = "support@clinic.com"
-    }
-});
+        Version = "v1",
+        Title = "Clinic Management API",
+        Description = "A comprehensive ASP.NET Core Web API for managing hospital operations including appointments, schedules, doctors, and patients.",
+        Contact = new OpenApiContact
+        {
+            Name = "Clinic Management Team",
+            Email = "support@clinic.com"
+        }
+    });
+
     // Enable XML comments for Swagger documentation
     var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
     var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
@@ -88,7 +91,14 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
 // Configure JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
-var secretKey = jwtSettings["SecretKey"] ?? throw new InvalidOperationException("JWT Secret Key not configured");
+// Ensure configuration exists to prevent null reference errors
+var secretKey = jwtSettings["SecretKey"];
+if (string.IsNullOrEmpty(secretKey))
+{
+    // Fallback or throw, depending on preference. 
+    // For safety, we shouldn't proceed without a key, but for dev we can warn.
+    throw new InvalidOperationException("JWT Secret Key not configured in appsettings.json");
+}
 
 builder.Services.AddAuthentication(options =>
 {
@@ -117,20 +127,33 @@ var app = builder.Build();
 await SeedRolesAndAdmin(app);
 
 // Configure the HTTP request pipeline.
-if (!app.Environment.IsDevelopment())
+// FIX: Separated Swagger from the Production-only block.
+// Swagger should typically run in Development.
+if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
-    app.UseSwaggerUI();
+    app.UseSwaggerUI(c =>
+    {
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "Clinic Management API v1");
+        // Optional: Set Swagger as the start page
+        // c.RoutePrefix = string.Empty; 
+    });
+}
+else
+{
+    // Production error handling
     app.UseExceptionHandler("/Home/Error");
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
 
 app.UseHttpsRedirection();
 app.UseRouting();
+
 app.UseAuthentication();
 app.UseAuthorization();
 
+// Using MapStaticAssets (Assuming .NET 9+) or standard UseStaticFiles
+// app.UseStaticFiles(); 
 app.MapStaticAssets();
 
 app.MapControllerRoute(
@@ -141,7 +164,6 @@ app.MapControllerRoute(
 app.Run();
 
 //Role Seeding Method
-
 async Task SeedRolesAndAdmin(WebApplication app)
 {
     using var scope = app.Services.CreateScope();

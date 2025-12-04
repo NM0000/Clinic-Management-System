@@ -13,5 +13,9 @@ namespace Clinic_Management_System.Services
         Task<AppointmentResponseDto?> UpdateAppointmentAsync(int id, AppointmentUpdateDto request);
         Task<bool> MarkAsCompletedAsync(int id, string userId); 
         Task<bool> CancelAppointmentAsync(int id);
+        Task<PagedResult<AppointmentResponseDto>> GetAppointmentsAdvancedAsync(
+            AppointmentSearchDto searchDto,
+            string? currentUserId,
+            string? userRole);
     }
 }
